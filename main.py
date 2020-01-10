@@ -5,11 +5,11 @@ import json
 import wget
 from gfycat.client import GfycatClient
 
-
-
 file_path = "c:/users/dgray/desktop/reddit image downloader/Images/"
 
 _directory = ""
+
+_currTitle = ""
 
 def parseUrl(url):
 
@@ -18,19 +18,27 @@ def parseUrl(url):
     parsedUrl = url.rsplit('/', 1)[-1]
 
     if "." in parsedUrl:
-        wget.download(url, out=_directory)
+        temp = wget.download(url, out=_directory)
+        
+        renameFile(temp, ".jpg")
     else:
         if "gfycat" in url: 
-            
-            print("Gfylink is: " + parsedUrl)
-
             gfyJson = gfycatClient.query_gfy(parsedUrl)
-            print(gfyJson['gfyItem']['gifUrl'])
-
-            wget.download(gfyJson['gfyItem']['mp4Url'], out=_directory)
-            print("gfycat link")
+            temp = wget.download(gfyJson['gfyItem']['mp4Url'], out=_directory)
+            renameFile(temp, ".mp4")
+        if "vid.me" in url: 
+            temp = wget.download(url, out=_directory)
+            renameFile(temp, ".mp4")
         else: 
             print("invalid url")      
+
+def renameFile(fileLocation, fileExt):
+
+    temp = _currTitle.replace('?', '')
+    temp2 = temp.replace('/', '')
+    temp3 = temp2.replace(':', '')
+    newTitle = temp3.replace(' ', '_')
+    os.rename(fileLocation, newTitle + fileExt)
 
 def CheckDirectory(sub_name, name):
 
@@ -45,17 +53,18 @@ def CheckDirectory(sub_name, name):
 def GetSubreddits(sub_name):
 
     global _directory
+    global _currTitle
 
-    for sub in reddit.subreddit(sub_name).hot(limit=50):
+    for sub in reddit.subreddit(sub_name).hot(limit=10):
         
         print("\n\n\n" + sub.title + "  :  " + sub.url)
+        _currTitle = sub.title
 
         if sub.author.name is not None:
             _directory = CheckDirectory(sub_name, sub.author.name)
         else: 
             _directory = CheckDirectory(sub_name, 'deleted')
 
-        print("\nDirectory: " + _directory)
         parseUrl(sub.url)
 
 
