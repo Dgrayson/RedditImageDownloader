@@ -5,15 +5,12 @@ import json
 import wget
 import re
 from gfycat.client import GfycatClient
-
-
+from gfycat.error import GfycatClientError
 
 file_path = "c:/users/dgray/desktop/reddit image downloader/Images/"
 
 _directory = ""
-
 _currTitle = ""
-
 _sortChoice = 0
 _imageLimit = 10
 
@@ -28,7 +25,13 @@ def parseUrl(url):
         renameFile(temp, ".jpg")
     else:
         if "gfycat" in url: 
-            gfyJson = gfycatClient.query_gfy(parsedUrl)
+                
+            try:
+                gfyJson = gfycatClient.query_gfy(parsedUrl)
+            except GfycatClientError as e:
+                print("File no longer exists \n")
+                return 
+
             temp = wget.download(gfyJson['gfyItem']['mp4Url'], out=_directory)
             renameFile(temp, ".mp4")
         if "vid.me" in url: 
@@ -39,9 +42,13 @@ def parseUrl(url):
 
 def renameFile(fileLocation, fileExt):
 
-    print("\n\n" + _directory)
     newTitle = re.sub(r'[\\/*?:"<>|.]', "_", _currTitle)
-    os.rename(fileLocation, _directory + "/" + newTitle + fileExt)
+
+    if os.path.exists(_directory + "/" + newTitle + fileExt):
+        os.remove(_directory + "/" + newTitle + fileExt)
+        os.rename(fileLocation, _directory + "/" + newTitle + fileExt)
+    else:
+        os.rename(fileLocation, _directory + "/" + newTitle + fileExt)
 
 
 def CheckDirectory(sub_name, name):
@@ -72,20 +79,22 @@ def GetSubreddits(sub_name):
         for sub in reddit.subreddit(sub_name).top(limit=_imageLimit):
             GetContent(sub, sub_name)
     else:
-        print("Invalid Choice")
+        print("Invalid")
 
 def GetContent(sub, sub_name):
+
+    global _directory
+    global _currTitle
+    
     print("\n\n\n" + sub.title + "  :  " + sub.url)
     _currTitle = sub.title
 
-    if sub.author.name is not None:
+    if sub.author is not None:
         _directory = CheckDirectory(sub_name, sub.author.name)
     else:
         _directory = CheckDirectory(sub_name, 'deleted')
 
     parseUrl(sub.url)
-
-
 
 def main():
     global _sortChoice
@@ -101,7 +110,6 @@ def main():
 
         if choice.strip(',.').lower() == 'n':
             running = False
-
 
 if __name__ == "__main__":
     main()
